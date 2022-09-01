@@ -487,6 +487,46 @@ void command_delete_dir(string parameters)
     remove(delete_dir_path.c_str());
 }
 
+bool command_search(string key, string dir_path)
+{
+    DIR *directory;
+    bool is_file = false;
+    struct dirent *marker;
+    struct stat checker, key_checker;
+    stat(get_absolute_path(key).c_str(), &key_checker);
+    if (S_ISDIR(key_checker.st_mode))
+        is_file = false;
+    else
+        is_file = true;
+    directory = opendir(dir_path.c_str());
+    while ((marker = readdir(directory)))
+    {
+        stat(marker->d_name, &checker);
+        if (S_ISDIR(checker.st_mode))
+        {
+            if (!is_file && key == string(marker->d_name))
+            {
+                return true;
+            }
+            if (string(marker->d_name) == "." || string(marker->d_name) == "..")
+                continue;
+            string next = dir_path + "/" + marker->d_name;
+            bool res = command_search(key, next);
+            if (res == true)
+                return true;
+        }
+        else
+        {
+            if (is_file && key == string(marker->d_name))
+            {
+                return true;
+            }
+        }
+    }
+    closedir(directory);
+    return false;
+}
+
 void copy_file(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
 {
     cout << "argument - " << entry_path << endl;
@@ -559,26 +599,30 @@ void command_copy(vector<string> parameters)
     // remove destination, now vector contains files to be copied
     parameters.pop_back();
     // process destination
-    string destination_path = get_absolute_path(destination_parameter);
-    populate_files_list(destination_path.c_str());
-    cout << "destination path - " << destination_path << endl;
+    string destination = get_absolute_path(destination_parameter);
+    cout << "destination path - " << destination << endl;
     // identify the source whether it's a file or directory
     struct stat t;
     for (int i = 0; i < parameters.size(); i++)
     {
         string entry = parameters[i];
         string entry_path = get_absolute_path(entry);
+        cout << "src path - " << entry_path << endl;
         stat(entry_path.c_str(), &t);
-        destination_path += entry_path.substr(entry_path.find_last_of("/"));
+        string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
         if (S_ISDIR(t.st_mode))
         {
+            cout << "detected directory" << endl;
             mkdir(destination_path.c_str(), 0777);
             copy_dir(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
         }
         else
+        {
+            cout << "detected file" << endl;
             copy_file(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
+        }
     }
-
+    populate_files_list(destination.c_str());
     print_files_list("Command Mode", "Succesfully copied! Displaying destination directory now.");
 }
 
@@ -696,46 +740,6 @@ void command_goto(vector<string> parameters)
     strcpy(path_char, path.c_str());
     populate_files_list(path_char);
     print_files_list("Command Mode", "Navigating to " + path);
-}
-
-bool command_search(string key, string dir_path)
-{
-    DIR *directory;
-    bool is_file = false;
-    struct dirent *marker;
-    struct stat checker, key_checker;
-    stat(get_absolute_path(key).c_str(), &key_checker);
-    if (S_ISDIR(key_checker.st_mode))
-        is_file = false;
-    else
-        is_file = true;
-    directory = opendir(dir_path.c_str());
-    while ((marker = readdir(directory)))
-    {
-        stat(marker->d_name, &checker);
-        if (S_ISDIR(checker.st_mode))
-        {
-            if (!is_file && key == string(marker->d_name))
-            {
-                return true;
-            }
-            if (string(marker->d_name) == "." || string(marker->d_name) == "..")
-                continue;
-            string next = dir_path + "/" + marker->d_name;
-            bool res = command_search(key, next);
-            if (res == true)
-                return true;
-        }
-        else
-        {
-            if (is_file && key == string(marker->d_name))
-            {
-                return true;
-            }
-        }
-    }
-    closedir(directory);
-    return false;
 }
 
 void command_mode()
