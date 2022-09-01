@@ -642,15 +642,14 @@ void command_move(vector<string> parameters)
     // remove destination, now vector contains files to be copied
     parameters.pop_back();
     // process destination
-    string destination_path = get_absolute_path(destination_parameter);
-    populate_files_list(destination_path.c_str());
+    string destination = get_absolute_path(destination_parameter);
     struct stat t;
     for (int i = 0; i < parameters.size(); i++)
     {
         string entry = parameters[i];
         string entry_path = get_absolute_path(entry);
         stat(entry_path.c_str(), &t);
-        destination_path += entry_path.substr(entry_path.find_last_of("/"));
+        string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
         if (S_ISDIR(t.st_mode))
         {
             mkdir(destination_path.c_str(), 0777);
@@ -663,7 +662,7 @@ void command_move(vector<string> parameters)
             command_delete_file(entry_path);
         }
     }
-
+    populate_files_list(destination.c_str());
     print_files_list("Command Mode", "Succesfully moved! Displaying destination directory now.");
 }
 
