@@ -346,6 +346,7 @@ void move_down()
 void go_to_home()
 {
     backward_stack.push_back(current_dir);
+    forward_stack.clear();
     struct passwd *pw = getpwuid(getuid());
     char *home = pw->pw_dir;
     home_dir = home;
@@ -408,6 +409,7 @@ void click()
     if (files_list[cursor].type == "dir" && files_list[cursor].name != "." && files_list[cursor].name != "..")
     {
         backward_stack.push_back(current_dir);
+        forward_stack.clear();
         char *path = new char[click_path.length() + 1];
         strcpy(path, click_path.c_str());
         populate_files_list(path);
@@ -756,6 +758,7 @@ void command_create_dir(vector<string> parameters)
 void command_goto(vector<string> parameters)
 {
     backward_stack.push_back(current_dir);
+
     string path = get_absolute_path(parameters[1]);
     char *path_char = new char[path.length() + 1];
     strcpy(path_char, path.c_str());
@@ -770,6 +773,7 @@ void command_goto(vector<string> parameters)
     }
     else
     {
+        forward_stack.clear();
         print_files_list("Command Mode", "Navigating to " + path);
     }
 }
