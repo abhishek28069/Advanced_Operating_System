@@ -346,7 +346,6 @@ void move_down()
 void go_to_home()
 {
     backward_stack.push_back(current_dir);
-    forward_stack.clear();
     struct passwd *pw = getpwuid(getuid());
     char *home = pw->pw_dir;
     home_dir = home;
@@ -409,7 +408,6 @@ void click()
     if (files_list[cursor].type == "dir" && files_list[cursor].name != "." && files_list[cursor].name != "..")
     {
         backward_stack.push_back(current_dir);
-        forward_stack.clear();
         char *path = new char[click_path.length() + 1];
         strcpy(path, click_path.c_str());
         populate_files_list(path);
@@ -544,17 +542,19 @@ void copy_file(string entry_path, string destination_path, mode_t modes, uid_t u
 {
     cout << "argument - " << entry_path << endl;
     cout << "created file path - " << destination_path << endl;
-    char letter;
-    FILE *src = fopen(entry_path.c_str(), "r");
-    FILE *dest = fopen(destination_path.c_str(), "w");
+
+    FILE *src = fopen(entry_path.c_str(), "rb");
+    FILE *dest = fopen(destination_path.c_str(), "wb");
     if (dest == NULL)
     {
         printf("Error opening file: %s\n", strerror(errno));
         return;
     }
+    char buf[4096];
+    size_t size;
     // copy contents
-    while ((letter = getc(src)) != EOF)
-        putc(letter, dest);
+    while (size = fread(buf, 1, 4096, src))
+        fwrite(buf, 1, size, dest);
     // copy permissions and owner
     chown(destination_path.c_str(), user, group);
     chmod(destination_path.c_str(), modes);
@@ -758,7 +758,6 @@ void command_create_dir(vector<string> parameters)
 void command_goto(vector<string> parameters)
 {
     backward_stack.push_back(current_dir);
-
     string path = get_absolute_path(parameters[1]);
     char *path_char = new char[path.length() + 1];
     strcpy(path_char, path.c_str());
@@ -773,7 +772,6 @@ void command_goto(vector<string> parameters)
     }
     else
     {
-        forward_stack.clear();
         print_files_list("Command Mode", "Navigating to " + path);
     }
 }
