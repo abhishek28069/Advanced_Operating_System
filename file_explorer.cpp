@@ -435,61 +435,6 @@ void resize(int dummy)
     print_files_list();
 }
 
-void command_delete_file(string parameters)
-{
-    // get absolute path
-    string delete_file_path = get_absolute_path(parameters);
-    // check whether it's a file or directory
-    struct stat check1;
-    stat(delete_file_path.c_str(), &check1);
-    if (S_ISDIR(check1.st_mode))
-    {
-        cout << "incorrect argument, required file, supplied directory" << endl;
-        return;
-    }
-    string destination = delete_file_path.substr(0, delete_file_path.find_last_of('/'));
-    int check2 = remove(delete_file_path.c_str());
-    if (check2 != 0)
-    {
-        cout << "delete file error" << endl;
-    }
-    populate_files_list(destination.c_str());
-    print_files_list("Command Mode", "Successfully deleted the file, Showing you the folder in which the file was present.");
-}
-
-void command_delete_dir(string parameters)
-{
-    string delete_dir_path = get_absolute_path(parameters);
-    DIR *directory;
-    struct dirent *marker;
-    directory = opendir(delete_dir_path.c_str());
-    if (directory == NULL)
-    {
-        cout << "No directory with that name";
-    }
-    while ((marker = readdir(directory)))
-    {
-        string dot_check = marker->d_name;
-        if (dot_check == "." || dot_check == "..")
-        {
-            continue;
-        }
-        string entry_name = delete_dir_path + "/" + dot_check;
-        struct stat dir_check;
-        stat(entry_name.c_str(), &dir_check);
-        if (S_ISDIR(dir_check.st_mode))
-        {
-            command_delete_dir(entry_name);
-        }
-        else
-        {
-            command_delete_file(entry_name);
-        }
-    }
-    closedir(directory);
-    remove(delete_dir_path.c_str());
-}
-
 bool command_search(string key, string dir_path)
 {
     cout << "searching - " << key << " in " << dir_path << endl;
@@ -533,6 +478,66 @@ bool command_search(string key, string dir_path)
     return false;
 }
 
+void command_delete_file(string parameters)
+{
+    // get absolute path
+    string delete_file_path = get_absolute_path(parameters);
+    // check whether it's a file or directory
+    struct stat check1;
+    stat(delete_file_path.c_str(), &check1);
+    if (S_ISDIR(check1.st_mode))
+    {
+        return;
+    }
+    string destination = delete_file_path.substr(0, delete_file_path.find_last_of('/'));
+    if (!command_search(delete_file_path.substr(delete_file_path.find_last_of('/') + 1), destination))
+    {
+        print_files_list("Command Mode", "Error, File to be deleted is not found!");
+        return;
+    }
+    int check2 = remove(delete_file_path.c_str());
+    if (check2 != 0)
+    {
+        cout << "delete file error" << endl;
+    }
+    print_files_list("Command Mode", "Successfully deleted the file.");
+}
+
+void command_delete_dir(string parameters)
+{
+    string delete_dir_path = get_absolute_path(parameters);
+    DIR *directory;
+    struct dirent *marker;
+    directory = opendir(delete_dir_path.c_str());
+    if (directory == NULL)
+    {
+        cout << "No directory with that name";
+        return;
+    }
+    while ((marker = readdir(directory)))
+    {
+        string dot_check = marker->d_name;
+        if (dot_check == "." || dot_check == "..")
+        {
+            continue;
+        }
+        string entry_name = delete_dir_path + "/" + dot_check;
+        struct stat dir_check;
+        stat(entry_name.c_str(), &dir_check);
+        if (S_ISDIR(dir_check.st_mode))
+        {
+            command_delete_dir(entry_name);
+        }
+        else
+        {
+            command_delete_file(entry_name);
+        }
+    }
+    closedir(directory);
+    remove(delete_dir_path.c_str());
+    print_files_list("Command Mode", "Successfully deleted the folder.");
+}
+
 void copy_file(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
 {
     cout << "argument - " << entry_path << endl;
@@ -565,6 +570,7 @@ void copy_dir(string entry_path, string destination_path, mode_t modes, uid_t us
     if (directory == NULL)
     {
         cout << "cannot open the directory" << endl;
+        return;
     }
     while ((marker = readdir(directory)))
     {
@@ -754,14 +760,18 @@ void command_goto(vector<string> parameters)
     char *path_char = new char[path.length() + 1];
     strcpy(path_char, path.c_str());
     populate_files_list(path_char);
-    print_files_list("Command Mode", "Navigating to " + path);
-}
-
-void command_quit()
-{
-    enableRawMode();
-    clrscr();
-    print_files_list("Normal Mode");
+    if (files_list.size() == 0)
+    {
+        string curr = backward_stack.back();
+        backward_stack.pop_back();
+        cout << curr << endl;
+        populate_files_list(curr.c_str());
+        print_files_list("Command Mode", "Error, Folder not present!");
+    }
+    else
+    {
+        print_files_list("Command Mode", "Navigating to " + path);
+    }
 }
 
 bool command_mode()
