@@ -757,7 +757,14 @@ void command_goto(vector<string> parameters)
     print_files_list("Command Mode", "Navigating to " + path);
 }
 
-void command_mode()
+void command_quit()
+{
+    enableRawMode();
+    clrscr();
+    print_files_list("Normal Mode");
+}
+
+bool command_mode()
 {
     string statement;
     while (true)
@@ -852,14 +859,20 @@ void command_mode()
                 parameters.erase(parameters.begin());
                 command_delete_dir(parameters[0]);
             }
+            else if (parameters[0] == "quit")
+            {
+                return true;
+            }
             else
                 print_files_list("Command Mode", "Error, the command you have entered is not available.");
+
             // char *path = new char[current_dir.length() + 1];
             // strcpy(path, current_dir.c_str());
             // populate_files_list(path);
             // print_files_list("Command Mode");
         }
     }
+    return false;
 }
 
 int main(void)
@@ -873,7 +886,8 @@ int main(void)
     signal(SIGWINCH, resize);
     print_files_list();
     char key;
-    while (read(STDIN_FILENO, &key, 1) == 1 && key != 'q')
+    bool quit = false;
+    while (!quit && read(STDIN_FILENO, &key, 1) == 1 && key != 'q')
     {
         switch (key)
         {
@@ -901,7 +915,7 @@ int main(void)
         case ':':
             print_files_list("Command Mode");
             disableRawMode();
-            command_mode();
+            quit = command_mode();
             break;
         default:
             break;
