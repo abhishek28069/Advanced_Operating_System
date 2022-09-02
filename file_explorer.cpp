@@ -271,7 +271,7 @@ void populate_files_list(const char *path = current_dir.c_str())
 void print_files_list(string mode = "Normal Mode", string status = "")
 {
     // cout << "--------------------------------------------------------------" << endl;
-    clrscr();
+    // clrscr();
     get_terminal_height();
     int loop_limit;
     loop_limit = min((int)files_list.size(), terminal_height - 3);
@@ -447,11 +447,14 @@ void command_delete_file(string parameters)
         cout << "incorrect argument, required file, supplied directory" << endl;
         return;
     }
+    string destination = delete_file_path.substr(0, delete_file_path.find_last_of('/'));
     int check2 = remove(delete_file_path.c_str());
     if (check2 != 0)
     {
         cout << "delete file error" << endl;
     }
+    populate_files_list(destination.c_str());
+    print_files_list("Command Mode", "Successfully deleted the file, Showing you the folder in which the file was present.");
 }
 
 void command_delete_dir(string parameters)
@@ -489,35 +492,38 @@ void command_delete_dir(string parameters)
 
 bool command_search(string key, string dir_path)
 {
+    cout << "searching - " << key << " in " << dir_path << endl;
     DIR *directory;
-    bool is_file = false;
     struct dirent *marker;
-    struct stat checker, key_checker;
-    stat(get_absolute_path(key).c_str(), &key_checker);
-    if (S_ISDIR(key_checker.st_mode))
-        is_file = false;
-    else
-        is_file = true;
+    struct stat checker;
+
     directory = opendir(dir_path.c_str());
+    if (directory == NULL)
+    {
+        return false;
+    }
     while ((marker = readdir(directory)))
     {
+        cout << marker->d_name << endl;
         stat(marker->d_name, &checker);
         if (S_ISDIR(checker.st_mode))
         {
-            if (!is_file && key == string(marker->d_name))
+
+            if (key == string(marker->d_name))
             {
                 return true;
             }
             if (string(marker->d_name) == "." || string(marker->d_name) == "..")
                 continue;
             string next = dir_path + "/" + marker->d_name;
+            cout << "recursive" << endl;
             bool res = command_search(key, next);
             if (res == true)
                 return true;
         }
         else
         {
-            if (is_file && key == string(marker->d_name))
+            if (key == string(marker->d_name))
             {
                 return true;
             }
@@ -674,9 +680,19 @@ void command_rename(vector<string> parameters)
         print_files_list("Command Mode", "Error, Must need atleast two arguemnts");
         return;
     }
-    string src_path = get_absolute_path(parameters[1]);
-    string dest = src_path.substr(0, src_path.find_last_of("/")) + "/" + parameters[2];
+    string src_name = parameters[1];
+    string abs_src_name = get_absolute_path(parameters[1]);
+    string src_path = abs_src_name.substr(0, abs_src_name.find_last_of("/"));
+    cout << src_name << " " << src_path << endl;
+    if (!command_search(src_name, src_path))
+    {
+        print_files_list("Command Mode", "Error, File not present!");
+        return;
+    }
+    string dest = src_path + "/" + parameters[2];
+    cout << "dest" << endl;
     rename(get_absolute_path(parameters[1]).c_str(), dest.c_str());
+    populate_files_list(src_path.c_str());
     print_files_list("Command Mode", "Renamed " + parameters[1] + " to " + parameters[2]);
 }
 
