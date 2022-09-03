@@ -538,17 +538,16 @@ void command_delete_dir(string parameters)
     print_files_list("Command Mode", "Successfully deleted the folder.");
 }
 
-void copy_file(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
+bool copy_file(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
 {
     cout << "argument - " << entry_path << endl;
     cout << "created file path - " << destination_path << endl;
 
     FILE *src = fopen(entry_path.c_str(), "rb");
     FILE *dest = fopen(destination_path.c_str(), "wb");
-    if (dest == NULL)
+    if (src == NULL || dest == NULL)
     {
-        printf("Error opening file: %s\n", strerror(errno));
-        return;
+        return false;
     }
     char buf[4096];
     size_t size;
@@ -560,6 +559,7 @@ void copy_file(string entry_path, string destination_path, mode_t modes, uid_t u
     chmod(destination_path.c_str(), modes);
     fclose(src);
     fclose(dest);
+    return true;
 }
 
 void copy_dir(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
@@ -614,16 +614,26 @@ void command_copy(vector<string> parameters)
     parameters.pop_back();
     // process destination
     string destination = get_absolute_path(destination_parameter);
-    cout << "destination path - " << destination << endl;
+    // cout << "destination path - " << destination << endl;
     // identify the source whether it's a file or directory
     struct stat t;
     for (int i = 0; i < parameters.size(); i++)
     {
         string entry = parameters[i];
         string entry_path = get_absolute_path(entry);
-        cout << "src path - " << entry_path << endl;
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
+        cout << "name - " << entry << endl;
+        cout << "dest - " << destination_path << endl;
+        // if file already present
+        if (command_search(entry, destination))
+        {
+            string decision;
+            print_files_list("Command Mode", "Error, The destination contains the file/folder already. Do you want to replace it?");
+            getline(cin, decision);
+            if (decision != "y")
+                return;
+        }
         if (S_ISDIR(t.st_mode))
         {
             cout << "detected directory" << endl;
@@ -633,7 +643,13 @@ void command_copy(vector<string> parameters)
         else
         {
             cout << "detected file" << endl;
-            copy_file(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
+            bool success;
+            success = copy_file(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
+            if (!success)
+            {
+                print_files_list("Command Mode", "Error, File not found!");
+                return;
+            }
         }
     }
     populate_files_list(destination.c_str());
@@ -664,6 +680,15 @@ void command_move(vector<string> parameters)
         string entry_path = get_absolute_path(entry);
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
+        // if file already present
+        if (command_search(entry, destination))
+        {
+            string decision;
+            print_files_list("Command Mode", "Error, The destination contains the file/folder already. Do you want to replace it?");
+            getline(cin, decision);
+            if (decision != "y")
+                return;
+        }
         if (S_ISDIR(t.st_mode))
         {
             mkdir(destination_path.c_str(), 0777);
