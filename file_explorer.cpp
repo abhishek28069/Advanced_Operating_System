@@ -754,6 +754,18 @@ void command_create_file(vector<string> parameters)
         backward_stack.push_back(current_dir);
         destination_dir_name = get_absolute_path(parameters[1]);
     }
+    // if file already present
+    if (command_search(new_file_name, destination_dir_name))
+    {
+        string decision;
+        print_files_list("Command Mode", "Error, The destination contains the file already. Do you want to replace it?");
+        getline(cin, decision);
+        if (decision != "y")
+        {
+            print_files_list("Command Mode");
+            return;
+        }
+    }
     string destination_file_name = destination_dir_name + "/" + new_file_name;
     // cout << "creating file - " << new_file_name << endl;
     // cout << "appended to dest dir - " << destination_file_name << endl;
@@ -780,6 +792,18 @@ void command_create_dir(vector<string> parameters)
     {
         backward_stack.push_back(current_dir);
         destination_name = get_absolute_path(parameters[1]);
+    }
+    // if file already present
+    if (command_search(new_dir_name, destination_name))
+    {
+        string decision;
+        print_files_list("Command Mode", "Error, The destination contains the folder already. Do you want to replace it?");
+        getline(cin, decision);
+        if (decision != "y")
+        {
+            print_files_list("Command Mode");
+            return;
+        }
     }
     string destination_dir_name = destination_name + "/" + new_dir_name;
     mkdir(destination_dir_name.c_str(), 0777);
