@@ -500,6 +500,7 @@ void command_delete_file(string parameters)
     {
         cout << "delete file error" << endl;
     }
+    populate_files_list(delete_file_path.substr(0, delete_file_path.find_last_of('/')).c_str());
     print_files_list("Command Mode", "Successfully deleted the file.");
 }
 
@@ -535,6 +536,7 @@ void command_delete_dir(string parameters)
     }
     closedir(directory);
     remove(delete_dir_path.c_str());
+    populate_files_list(delete_dir_path.substr(0, delete_dir_path.find_last_of('/')).c_str());
     print_files_list("Command Mode", "Successfully deleted the folder.");
 }
 
@@ -621,18 +623,22 @@ void command_copy(vector<string> parameters)
     {
         string entry = parameters[i];
         string entry_path = get_absolute_path(entry);
+        string entry_name = entry_path.substr(entry_path.find_last_of('/') + 1);
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
-        cout << "name - " << entry << endl;
+        cout << "name - " << entry_name << endl;
         cout << "dest - " << destination_path << endl;
         // if file already present
-        if (command_search(entry, destination))
+        if (command_search(entry_name, destination))
         {
             string decision;
             print_files_list("Command Mode", "Error, The destination contains the file/folder already. Do you want to replace it?");
             getline(cin, decision);
             if (decision != "y")
+            {
+                print_files_list("Command Mode");
                 return;
+            }
         }
         if (S_ISDIR(t.st_mode))
         {
@@ -678,10 +684,11 @@ void command_move(vector<string> parameters)
     {
         string entry = parameters[i];
         string entry_path = get_absolute_path(entry);
+        string entry_name = entry_path.substr(entry_path.find_last_of('/') + 1);
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
         // if file already present
-        if (command_search(entry, destination))
+        if (command_search(entry_name, destination))
         {
             string decision;
             print_files_list("Command Mode", "Error, The destination contains the file/folder already. Do you want to replace it?");
