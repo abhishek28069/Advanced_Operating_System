@@ -41,6 +41,7 @@ deque<string> forward_stack;
 deque<string> backward_stack;
 struct termios orig_termios;
 int cursor = 0;
+bool in_command_mode = false;
 
 // Auxillary Functions
 void get_terminal_height()
@@ -228,7 +229,7 @@ void print_files_list(string mode = "Normal Mode", string status = "")
     clrscr();
     get_terminal_height();
     int loop_limit;
-    loop_limit = min((int)files_list.size(), terminal_height - 3);
+    loop_limit = min((int)files_list.size(), terminal_height - 2);
     bottom = top + loop_limit;
     if (cursor == bottom)
     {
@@ -240,46 +241,61 @@ void print_files_list(string mode = "Normal Mode", string status = "")
         top--;
         bottom--;
     }
+    cout << endl;
     for (int i = top; i < bottom; i++)
     {
         if (i == cursor)
+        {
             cout << ">>> " << left;
+            cout << "\033[1;37m\033[1;44m";
+        }
         else
             cout << "    " << left;
-        if (files_list[i].name.length() > 60)
-            cout << setw(60) << left << files_list[i].name.substr(0, 59) + "...";
+        if (files_list[i].name.length() > 30)
+            cout << setw(30) << left << files_list[i].name.substr(0, 25) + "...";
         else
-            cout << setw(60) << left << files_list[i].name;
+            cout << setw(30) << left << files_list[i].name;
         cout << setw(15) << files_list[i].permissions;
         cout << setw(20) << files_list[i].user_name;
         cout << setw(20) << files_list[i].group_name;
         cout << setw(15) << right << files_list[i].size;
         cout << setw(25) << right << files_list[i].date;
-
+        if (i == cursor)
+        {
+            cout << "\033[0m";
+        }
         cout << endl;
     }
-    for (int j = loop_limit; j < terminal_height - 3; j++)
+    for (int j = loop_limit; j < terminal_height - 2; j++)
     {
         cout << endl;
     }
-    cout << "Current Directory - " << current_dir << endl;
-    cout << mode << ": ";
+    cout << "\033[1;30m\033[1;44m" << mode << ":\033[0m ";
     if (status == "")
         cout << current_dir << endl;
     else
-        cout << status << endl;
+    {
+        if (status.substr(0, 5) == "Error")
+        {
+            cout << "\033[1;30m\033[1;41m" << status << "\033[0m\n";
+        }
+        else
+        {
+            cout << "\033[1;30m\033[1;42m" << status << "\033[0m\n";
+        }
+    }
 }
 
 void move_up()
 {
     cursor > 0 && cursor--;
-    print_files_list();
+    print_files_list("Normal Mode");
 }
 
 void move_down()
 {
     cursor < files_list.size() - 1 && cursor++;
-    print_files_list();
+    print_files_list("Normal Mode");
 }
 
 void go_to_home()
@@ -291,7 +307,7 @@ void go_to_home()
     home_dir = home;
     cursor = 0;
     populate_files_list(home);
-    print_files_list();
+    print_files_list("Normal Mode");
 }
 
 void go_to_parent()
@@ -306,7 +322,7 @@ void go_to_parent()
     strcpy(path, parent_dir.c_str());
     populate_files_list(path);
     cursor = 0;
-    print_files_list();
+    print_files_list("Normal Mode");
 }
 
 void go_backward()
@@ -320,7 +336,7 @@ void go_backward()
     strcpy(path, back.c_str());
     populate_files_list(path);
     cursor = 0;
-    print_files_list();
+    print_files_list("Normal Mode");
 }
 
 void go_forward()
@@ -334,7 +350,7 @@ void go_forward()
     strcpy(path, forwar.c_str());
     populate_files_list(path);
     cursor = 0;
-    print_files_list();
+    print_files_list("Normal Mode");
 }
 
 void click()
@@ -349,7 +365,7 @@ void click()
         populate_files_list(path);
         top = 0;
         cursor = 0;
-        print_files_list();
+        print_files_list("Normal Mode");
     }
     else if (files_list[cursor].name != "." && files_list[cursor].name != "..")
     {
@@ -360,6 +376,7 @@ void click()
             char *path = new char[path_string.length() + 1];
             strcpy(path, path_string.c_str());
             execl("/usr/bin/xdg-open", "xdg-open", path, NULL);
+            print_files_list("Normal Mode");
             exit(1);
         }
     }
@@ -368,7 +385,14 @@ void click()
 void resize(int dummy)
 {
     cursor = 0;
-    print_files_list();
+    if (in_command_mode)
+    {
+        print_files_list("Command Mode");
+    }
+    else
+    {
+        print_files_list("Normal Mode");
+    }
 }
 
 // Command mode functions
@@ -857,6 +881,7 @@ bool command_mode()
                 print_files_list("Command Mode", "Error, the command you have entered is not available.");
         }
     }
+    in_command_mode = false;
     return false;
 }
 
@@ -898,6 +923,7 @@ int main(void)
             click();
             break;
         case ':':
+            in_command_mode = true;
             print_files_list("Command Mode");
             disableRawMode();
             quit = command_mode();
