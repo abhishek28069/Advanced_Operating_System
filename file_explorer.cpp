@@ -8,8 +8,8 @@
 #include <cstring>
 #include <ctime>
 #include <unistd.h>
-#include <termios.h>
-#include <signal.h>
+#include <termios.h>   //for raw mode
+#include <signal.h>    // event handling capability
 #include <dirent.h>    //for opening and reading dir contents
 #include <sys/stat.h>  //for getting file stats
 #include <sys/types.h> //contains all additonal types
@@ -225,11 +225,10 @@ void populate_files_list(const char *path = current_dir.c_str())
 // Takes the global files list and prints out to terminal
 void print_files_list(string mode = "Normal Mode", string status = "")
 {
-    // cout << "--------------------------------------------------------------" << endl;
     clrscr();
     get_terminal_height();
     int loop_limit;
-    loop_limit = min((int)files_list.size(), terminal_height - 5);
+    loop_limit = min((int)files_list.size(), terminal_height - 3);
     bottom = top + loop_limit;
     if (cursor == bottom)
     {
@@ -254,36 +253,21 @@ void print_files_list(string mode = "Normal Mode", string status = "")
         cout << setw(15) << files_list[i].permissions;
         cout << setw(20) << files_list[i].user_name;
         cout << setw(20) << files_list[i].group_name;
-        cout << setw(20) << files_list[i].size;
-        cout << setw(20) << files_list[i].date;
+        cout << setw(15) << right << files_list[i].size;
+        cout << setw(25) << right << files_list[i].date;
 
         cout << endl;
     }
-    for (int j = loop_limit; j < terminal_height - 5; j++)
+    for (int j = loop_limit; j < terminal_height - 3; j++)
     {
         cout << endl;
     }
-    cout << "Backward - ";
-    for (auto &i : backward_stack)
-    {
-        cout << i << "  ";
-    }
-    cout << endl;
-    cout << "Forward - ";
-    for (auto &i : forward_stack)
-    {
-        cout << i << "  ";
-    }
-    cout << endl;
     cout << "Current Directory - " << current_dir << endl;
     cout << mode << ": ";
     if (status == "")
         cout << current_dir << endl;
     else
         cout << status << endl;
-
-    // cout << "Current - " << current_dir << endl;
-    // cout << "Parent - " << parent_dir << endl;
 }
 
 void move_up()
@@ -334,7 +318,6 @@ void go_backward()
     forward_stack.push_back(current_dir);
     char *path = new char[back.length() + 1];
     strcpy(path, back.c_str());
-    // cout << endl << "going back to - " << path << endl;
     populate_files_list(path);
     cursor = 0;
     print_files_list();
@@ -350,7 +333,6 @@ void go_forward()
     char *path = new char[forwar.length() + 1];
     strcpy(path, forwar.c_str());
     populate_files_list(path);
-    // cout << endl << "going front to - " << path << endl;
     cursor = 0;
     print_files_list();
 }
@@ -358,7 +340,6 @@ void go_forward()
 void click()
 {
     string click_path = files_list[cursor].dir_path;
-    // cout << click_path << endl;
     if (files_list[cursor].type == "dir" && files_list[cursor].name != "." && files_list[cursor].name != "..")
     {
         backward_stack.push_back(current_dir);
@@ -393,7 +374,6 @@ void resize(int dummy)
 // Command mode functions
 bool command_search(string key, string dir_path)
 {
-    // cout << "searching - " << key << " in " << dir_path << endl;
     DIR *directory;
     struct dirent *marker;
     struct stat checker;
@@ -405,7 +385,6 @@ bool command_search(string key, string dir_path)
     }
     while ((marker = readdir(directory)))
     {
-        // cout << marker->d_name << endl;
         stat(marker->d_name, &checker);
         if (S_ISDIR(checker.st_mode))
         {
@@ -417,7 +396,6 @@ bool command_search(string key, string dir_path)
             if (string(marker->d_name) == "." || string(marker->d_name) == "..")
                 continue;
             string next = dir_path + "/" + marker->d_name;
-            // cout << "recursive" << endl;
             bool res = command_search(key, next);
             if (res == true)
                 return true;
@@ -456,7 +434,6 @@ void command_delete_file(string parameters)
     {
         print_files_list("Command Mode", "Error deleting file!");
     }
-    // populate_files_list(delete_file_path.substr(0, delete_file_path.find_last_of('/')).c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Successfully deleted the file.");
 }
@@ -493,15 +470,12 @@ void command_delete_dir(string parameters)
     }
     closedir(directory);
     remove(delete_dir_path.c_str());
-    // populate_files_list(delete_dir_path.substr(0, delete_dir_path.find_last_of('/')).c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Successfully deleted the folder.");
 }
 
 bool copy_file(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
 {
-    // cout << "argument - " << entry_path << endl;
-    // cout << "created file path - " << destination_path << endl;
     FILE *src = fopen(entry_path.c_str(), "rb");
     FILE *dest = fopen(destination_path.c_str(), "wb");
     if (src == NULL || dest == NULL)
@@ -523,8 +497,6 @@ bool copy_file(string entry_path, string destination_path, mode_t modes, uid_t u
 
 void copy_dir(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
 {
-    // cout << "copying dir argument - " << entry_path << endl;
-    // cout << "created dest dir path - " << destination_path << endl;
     DIR *directory;
     struct dirent *marker;
     directory = opendir(entry_path.c_str());
@@ -549,7 +521,6 @@ void copy_dir(string entry_path, string destination_path, mode_t modes, uid_t us
         }
         else
         {
-            // cout << "file - " << dot_check << endl;
             copy_file(entry_name, destination_name, check.st_mode, check.st_uid, check.st_gid);
         }
     }
@@ -572,7 +543,6 @@ void command_copy(vector<string> parameters)
     parameters.pop_back();
     // process destination
     string destination = get_absolute_path(destination_parameter);
-    // cout << "destination path - " << destination << endl;
     // identify the source whether it's a file or directory
     struct stat t;
     for (int i = 0; i < parameters.size(); i++)
@@ -582,9 +552,7 @@ void command_copy(vector<string> parameters)
         string entry_name = entry_path.substr(entry_path.find_last_of('/') + 1);
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
-        // cout << "name - " << entry_name << endl;
-        // cout << "dest - " << destination_path << endl;
-        // if file already present
+        // if already present
         if (command_search(entry_name, destination))
         {
             string decision;
@@ -598,13 +566,11 @@ void command_copy(vector<string> parameters)
         }
         if (S_ISDIR(t.st_mode))
         {
-            // cout << "detected directory" << endl;
             mkdir(destination_path.c_str(), 0777);
             copy_dir(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
         }
         else
         {
-            // cout << "detected file" << endl;
             bool success;
             success = copy_file(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
             if (!success)
@@ -614,7 +580,6 @@ void command_copy(vector<string> parameters)
             }
         }
     }
-    // populate_files_list(destination.c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully copied!");
 }
@@ -665,7 +630,6 @@ void command_move(vector<string> parameters)
         }
     }
 
-    // populate_files_list(destination.c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully moved!");
 }
@@ -681,16 +645,13 @@ void command_rename(vector<string> parameters)
     string src_name = parameters[1];
     string abs_src_name = get_absolute_path(parameters[1]);
     string src_path = abs_src_name.substr(0, abs_src_name.find_last_of("/"));
-    // cout << src_name << " " << src_path << endl;
     if (!command_search(src_name, src_path))
     {
         print_files_list("Command Mode", "Error, File not present!");
         return;
     }
     string dest = src_path + "/" + parameters[2];
-    // cout << "dest" << endl;
     rename(get_absolute_path(parameters[1]).c_str(), dest.c_str());
-    // populate_files_list(src_path.c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Renamed " + parameters[1] + " to " + parameters[2]);
 }
@@ -710,7 +671,6 @@ void command_create_file(vector<string> parameters)
         destination_dir_name = current_dir;
     else
     {
-        // backward_stack.push_back(current_dir);
         destination_dir_name = get_absolute_path(parameters[1]);
     }
     // if file already present
@@ -726,11 +686,8 @@ void command_create_file(vector<string> parameters)
         }
     }
     string destination_file_name = destination_dir_name + "/" + new_file_name;
-    // cout << "creating file - " << new_file_name << endl;
-    // cout << "appended to dest dir - " << destination_file_name << endl;
     FILE *f = fopen(destination_file_name.c_str(), "w+");
     fclose(f);
-    // populate_files_list(destination_dir_name.c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully created new file!");
 }
@@ -750,7 +707,6 @@ void command_create_dir(vector<string> parameters)
         destination_name = current_dir;
     else
     {
-        // backward_stack.push_back(current_dir);
         destination_name = get_absolute_path(parameters[1]);
     }
     // if file already present
@@ -767,7 +723,6 @@ void command_create_dir(vector<string> parameters)
     }
     string destination_dir_name = destination_name + "/" + new_dir_name;
     mkdir(destination_dir_name.c_str(), 0777);
-    // populate_files_list(destination_name.c_str());
     populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully created new directory!");
 }
@@ -900,11 +855,6 @@ bool command_mode()
             }
             else
                 print_files_list("Command Mode", "Error, the command you have entered is not available.");
-
-            // char *path = new char[current_dir.length() + 1];
-            // strcpy(path, current_dir.c_str());
-            // populate_files_list(path);
-            // print_files_list("Command Mode");
         }
     }
     return false;
@@ -924,7 +874,6 @@ int main(void)
     bool quit = false;
     while (!quit && read(STDIN_FILENO, &key, 1) == 1 && key != 'q')
     {
-        // cout << (int)key << endl;
         switch (key)
         {
         case 65:
