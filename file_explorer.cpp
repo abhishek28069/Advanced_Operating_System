@@ -334,8 +334,7 @@ void go_backward()
     forward_stack.push_back(current_dir);
     char *path = new char[back.length() + 1];
     strcpy(path, back.c_str());
-    cout << endl
-         << "going back to - " << path << endl;
+    // cout << endl << "going back to - " << path << endl;
     populate_files_list(path);
     cursor = 0;
     print_files_list();
@@ -351,8 +350,7 @@ void go_forward()
     char *path = new char[forwar.length() + 1];
     strcpy(path, forwar.c_str());
     populate_files_list(path);
-    cout << endl
-         << "going front to - " << path << endl;
+    // cout << endl << "going front to - " << path << endl;
     cursor = 0;
     print_files_list();
 }
@@ -392,9 +390,10 @@ void resize(int dummy)
     print_files_list();
 }
 
+// Command mode functions
 bool command_search(string key, string dir_path)
 {
-    cout << "searching - " << key << " in " << dir_path << endl;
+    // cout << "searching - " << key << " in " << dir_path << endl;
     DIR *directory;
     struct dirent *marker;
     struct stat checker;
@@ -406,7 +405,7 @@ bool command_search(string key, string dir_path)
     }
     while ((marker = readdir(directory)))
     {
-        cout << marker->d_name << endl;
+        // cout << marker->d_name << endl;
         stat(marker->d_name, &checker);
         if (S_ISDIR(checker.st_mode))
         {
@@ -418,7 +417,7 @@ bool command_search(string key, string dir_path)
             if (string(marker->d_name) == "." || string(marker->d_name) == "..")
                 continue;
             string next = dir_path + "/" + marker->d_name;
-            cout << "recursive" << endl;
+            // cout << "recursive" << endl;
             bool res = command_search(key, next);
             if (res == true)
                 return true;
@@ -455,7 +454,7 @@ void command_delete_file(string parameters)
     int check2 = remove(delete_file_path.c_str());
     if (check2 != 0)
     {
-        cout << "delete file error" << endl;
+        print_files_list("Command Mode", "Error deleting file!");
     }
     // populate_files_list(delete_file_path.substr(0, delete_file_path.find_last_of('/')).c_str());
     print_files_list("Command Mode", "Successfully deleted the file.");
@@ -499,9 +498,8 @@ void command_delete_dir(string parameters)
 
 bool copy_file(string entry_path, string destination_path, mode_t modes, uid_t user, gid_t group)
 {
-    cout << "argument - " << entry_path << endl;
-    cout << "created file path - " << destination_path << endl;
-
+    // cout << "argument - " << entry_path << endl;
+    // cout << "created file path - " << destination_path << endl;
     FILE *src = fopen(entry_path.c_str(), "rb");
     FILE *dest = fopen(destination_path.c_str(), "wb");
     if (src == NULL || dest == NULL)
@@ -549,7 +547,7 @@ void copy_dir(string entry_path, string destination_path, mode_t modes, uid_t us
         }
         else
         {
-            cout << "file - " << dot_check << endl;
+            // cout << "file - " << dot_check << endl;
             copy_file(entry_name, destination_name, check.st_mode, check.st_uid, check.st_gid);
         }
     }
@@ -582,8 +580,8 @@ void command_copy(vector<string> parameters)
         string entry_name = entry_path.substr(entry_path.find_last_of('/') + 1);
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
-        cout << "name - " << entry_name << endl;
-        cout << "dest - " << destination_path << endl;
+        // cout << "name - " << entry_name << endl;
+        // cout << "dest - " << destination_path << endl;
         // if file already present
         if (command_search(entry_name, destination))
         {
@@ -598,13 +596,13 @@ void command_copy(vector<string> parameters)
         }
         if (S_ISDIR(t.st_mode))
         {
-            cout << "detected directory" << endl;
+            // cout << "detected directory" << endl;
             mkdir(destination_path.c_str(), 0777);
             copy_dir(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
         }
         else
         {
-            cout << "detected file" << endl;
+            // cout << "detected file" << endl;
             bool success;
             success = copy_file(entry_path, destination_path, t.st_mode, t.st_uid, t.st_gid);
             if (!success)
@@ -679,14 +677,14 @@ void command_rename(vector<string> parameters)
     string src_name = parameters[1];
     string abs_src_name = get_absolute_path(parameters[1]);
     string src_path = abs_src_name.substr(0, abs_src_name.find_last_of("/"));
-    cout << src_name << " " << src_path << endl;
+    // cout << src_name << " " << src_path << endl;
     if (!command_search(src_name, src_path))
     {
         print_files_list("Command Mode", "Error, File not present!");
         return;
     }
     string dest = src_path + "/" + parameters[2];
-    cout << "dest" << endl;
+    // cout << "dest" << endl;
     rename(get_absolute_path(parameters[1]).c_str(), dest.c_str());
     // populate_files_list(src_path.c_str());
     print_files_list("Command Mode", "Renamed " + parameters[1] + " to " + parameters[2]);
@@ -707,7 +705,7 @@ void command_create_file(vector<string> parameters)
         destination_dir_name = current_dir;
     else
     {
-        backward_stack.push_back(current_dir);
+        // backward_stack.push_back(current_dir);
         destination_dir_name = get_absolute_path(parameters[1]);
     }
     // if file already present
@@ -746,7 +744,7 @@ void command_create_dir(vector<string> parameters)
         destination_name = current_dir;
     else
     {
-        backward_stack.push_back(current_dir);
+        // backward_stack.push_back(current_dir);
         destination_name = get_absolute_path(parameters[1]);
     }
     // if file already present
