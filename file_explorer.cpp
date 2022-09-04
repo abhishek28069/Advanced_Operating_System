@@ -457,6 +457,7 @@ void command_delete_file(string parameters)
         print_files_list("Command Mode", "Error deleting file!");
     }
     // populate_files_list(delete_file_path.substr(0, delete_file_path.find_last_of('/')).c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Successfully deleted the file.");
 }
 
@@ -493,6 +494,7 @@ void command_delete_dir(string parameters)
     closedir(directory);
     remove(delete_dir_path.c_str());
     // populate_files_list(delete_dir_path.substr(0, delete_dir_path.find_last_of('/')).c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Successfully deleted the folder.");
 }
 
@@ -613,6 +615,7 @@ void command_copy(vector<string> parameters)
         }
     }
     // populate_files_list(destination.c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully copied!");
 }
 
@@ -663,6 +666,7 @@ void command_move(vector<string> parameters)
     }
 
     // populate_files_list(destination.c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully moved!");
 }
 
@@ -687,6 +691,7 @@ void command_rename(vector<string> parameters)
     // cout << "dest" << endl;
     rename(get_absolute_path(parameters[1]).c_str(), dest.c_str());
     // populate_files_list(src_path.c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Renamed " + parameters[1] + " to " + parameters[2]);
 }
 
@@ -726,6 +731,7 @@ void command_create_file(vector<string> parameters)
     FILE *f = fopen(destination_file_name.c_str(), "w+");
     fclose(f);
     // populate_files_list(destination_dir_name.c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully created new file!");
 }
 
@@ -762,13 +768,20 @@ void command_create_dir(vector<string> parameters)
     string destination_dir_name = destination_name + "/" + new_dir_name;
     mkdir(destination_dir_name.c_str(), 0777);
     // populate_files_list(destination_name.c_str());
+    populate_files_list(current_dir.c_str());
     print_files_list("Command Mode", "Succesfully created new directory!");
 }
 
 void command_goto(vector<string> parameters)
 {
-    backward_stack.push_back(current_dir);
     string path = get_absolute_path(parameters[1]);
+    cout << "goto - " << path << endl;
+    if (path == current_dir)
+    {
+        print_files_list("Command Mode", "Navigating to " + path);
+        return;
+    }
+    backward_stack.push_back(current_dir);
     char *path_char = new char[path.length() + 1];
     strcpy(path_char, path.c_str());
     populate_files_list(path_char);
