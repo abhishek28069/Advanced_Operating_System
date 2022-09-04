@@ -1,6 +1,6 @@
 #include <iostream>
 #include <bits/stdc++.h>
-#include <iomanip>
+#include <iomanip> //for cout formatting
 #include <errno.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -10,15 +10,15 @@
 #include <unistd.h>
 #include <termios.h>
 #include <signal.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <pwd.h>
-#include <grp.h>
-
+#include <dirent.h>    //for opening and reading dir contents
+#include <sys/stat.h>  //for getting file stats
+#include <sys/types.h> //contains all additonal types
+#include <sys/ioctl.h> //for reading terminal height
+#include <pwd.h>       //for username
+#include <grp.h>       //for groupname
 using namespace std;
 
+// Struct defining the files
 struct files
 {
     string name;
@@ -30,6 +30,8 @@ struct files
     string date;
     string size;
 };
+
+// Global variables used and manipulated throughout the code
 vector<struct files> files_list;
 string current_dir = get_current_dir_name();
 string parent_dir, home_dir;
@@ -40,6 +42,7 @@ deque<string> backward_stack;
 struct termios orig_termios;
 int cursor = 0;
 
+// Auxillary Functions
 void get_terminal_height()
 {
     struct winsize w;
@@ -51,6 +54,7 @@ void disableRawMode()
 {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
+
 void enableRawMode()
 {
     tcgetattr(STDIN_FILENO, &orig_termios);
@@ -166,57 +170,7 @@ string print_permissions(struct stat file)
     return permissions;
 }
 
-// void populate_files_list()
-// {
-//     const char *cwd = get_current_dir_name();
-//     current_dir = cwd;
-//     parent_dir = current_dir.substr(0, current_dir.find_last_of('/'));
-//     struct stat t;
-//     struct dirent *entry;
-//     DIR *dir = opendir(cwd);
-//     files_list.clear();
-//     if (dir != NULL)
-//     {
-//         while ((entry = readdir(dir)) != NULL)
-//         {
-//             struct files file;
-//             string file_name = entry->d_name;
-//             string path_string = string(cwd) + "/" + file_name;
-//             char *path = new char[path_string.length() + 1];
-//             strcpy(path, path_string.c_str());
-//             stat(path, &t);
-//             char *date = new char[20];
-//             strftime(date, 20, "%a %d/%m/%y %R", localtime(&(t.st_ctime)));
-//             string permissions = print_permissions(t);
-//             passwd *user_name = getpwuid(t.st_uid);
-//             group *group_name = getgrgid(t.st_gid);
-//             string type;
-//             string dir_path;
-//             if (S_ISDIR(t.st_mode))
-//             {
-//                 type = "dir";
-//                 dir_path = path_string;
-//             }
-//             else
-//             {
-//                 type = "file";
-//                 dir_path = "";
-//             }
-//             files_list.push_back(files());
-//             files_list[files_list.size() - 1].name = file_name;
-//             files_list[files_list.size() - 1].type = type;
-//             files_list[files_list.size() - 1].dir_path = dir_path;
-//             files_list[files_list.size() - 1].user_name = user_name->pw_name;
-//             files_list[files_list.size() - 1].group_name = group_name->gr_name;
-//             files_list[files_list.size() - 1].date = date;
-//             files_list[files_list.size() - 1].size = to_string(t.st_size) + " Bytes";
-//             files_list[files_list.size() - 1].permissions = permissions;
-//         }
-//         sort(files_list.begin(), files_list.end(), comparator);
-//         closedir(dir);
-//     }
-// }
-
+// Populates the files list global variable with the files in given directory
 void populate_files_list(const char *path = current_dir.c_str())
 {
     const char *cwd = path;
@@ -268,13 +222,14 @@ void populate_files_list(const char *path = current_dir.c_str())
     }
 }
 
+// Takes the global files list and prints out to terminal
 void print_files_list(string mode = "Normal Mode", string status = "")
 {
     // cout << "--------------------------------------------------------------" << endl;
-    // clrscr();
+    clrscr();
     get_terminal_height();
     int loop_limit;
-    loop_limit = min((int)files_list.size(), terminal_height - 3);
+    loop_limit = min((int)files_list.size(), terminal_height - 5);
     bottom = top + loop_limit;
     if (cursor == bottom)
     {
@@ -289,44 +244,44 @@ void print_files_list(string mode = "Normal Mode", string status = "")
     for (int i = top; i < bottom; i++)
     {
         if (i == cursor)
-            cout << "➡️";
+            cout << ">>> " << left;
         else
-            cout << " ";
+            cout << "    " << left;
+        if (files_list[i].name.length() > 60)
+            cout << setw(60) << left << files_list[i].name.substr(0, 59) + "...";
+        else
+            cout << setw(60) << left << files_list[i].name;
         cout << setw(15) << files_list[i].permissions;
         cout << setw(20) << files_list[i].user_name;
         cout << setw(20) << files_list[i].group_name;
         cout << setw(20) << files_list[i].size;
         cout << setw(20) << files_list[i].date;
-        if (files_list[i].name.length() > 60)
-            cout << "\t\t" << files_list[i].name.substr(0, 59) + "...";
-        else
-            cout << "\t\t" << files_list[i].name;
+
         cout << endl;
     }
-    for (int j = loop_limit; j < terminal_height - 3; j++)
+    for (int j = loop_limit; j < terminal_height - 5; j++)
     {
         cout << endl;
     }
+    cout << "Backward - ";
+    for (auto &i : backward_stack)
+    {
+        cout << i << "  ";
+    }
+    cout << endl;
+    cout << "Forward - ";
+    for (auto &i : forward_stack)
+    {
+        cout << i << "  ";
+    }
+    cout << endl;
     cout << "Current Directory - " << current_dir << endl;
     cout << mode << ": ";
     if (status == "")
         cout << current_dir << endl;
     else
         cout << status << endl;
-    // cout << endl
-    //      << "Backward - ";
-    // for (auto &i : backward_stack)
-    // {
-    //     cout << i << "  ";
-    // }
-    // cout << endl;
-    // cout << endl
-    //      << "Forward - ";
-    // for (auto &i : forward_stack)
-    // {
-    //     cout << i << "  ";
-    // }
-    // cout << endl;
+
     // cout << "Current - " << current_dir << endl;
     // cout << "Parent - " << parent_dir << endl;
 }
@@ -376,7 +331,7 @@ void go_backward()
         return;
     string back = backward_stack.back();
     backward_stack.pop_back();
-    forward_stack.push_back(back);
+    forward_stack.push_back(current_dir);
     char *path = new char[back.length() + 1];
     strcpy(path, back.c_str());
     cout << endl
@@ -392,7 +347,7 @@ void go_forward()
         return;
     string forwar = forward_stack.back();
     forward_stack.pop_back();
-    backward_stack.push_back(forwar);
+    backward_stack.push_back(current_dir);
     char *path = new char[forwar.length() + 1];
     strcpy(path, forwar.c_str());
     populate_files_list(path);
@@ -502,7 +457,7 @@ void command_delete_file(string parameters)
     {
         cout << "delete file error" << endl;
     }
-    populate_files_list(delete_file_path.substr(0, delete_file_path.find_last_of('/')).c_str());
+    // populate_files_list(delete_file_path.substr(0, delete_file_path.find_last_of('/')).c_str());
     print_files_list("Command Mode", "Successfully deleted the file.");
 }
 
@@ -514,7 +469,7 @@ void command_delete_dir(string parameters)
     directory = opendir(delete_dir_path.c_str());
     if (directory == NULL)
     {
-        cout << "No directory with that name";
+        print_files_list("Command Mode", "Error, Folder to be deleted is not found!");
         return;
     }
     while ((marker = readdir(directory)))
@@ -538,7 +493,7 @@ void command_delete_dir(string parameters)
     }
     closedir(directory);
     remove(delete_dir_path.c_str());
-    populate_files_list(delete_dir_path.substr(0, delete_dir_path.find_last_of('/')).c_str());
+    // populate_files_list(delete_dir_path.substr(0, delete_dir_path.find_last_of('/')).c_str());
     print_files_list("Command Mode", "Successfully deleted the folder.");
 }
 
@@ -659,8 +614,8 @@ void command_copy(vector<string> parameters)
             }
         }
     }
-    populate_files_list(destination.c_str());
-    print_files_list("Command Mode", "Succesfully copied! Displaying destination directory now.");
+    // populate_files_list(destination.c_str());
+    print_files_list("Command Mode", "Succesfully copied!");
 }
 
 void command_move(vector<string> parameters)
@@ -709,8 +664,8 @@ void command_move(vector<string> parameters)
         }
     }
 
-    populate_files_list(destination.c_str());
-    print_files_list("Command Mode", "Succesfully moved! Displaying destination directory now.");
+    // populate_files_list(destination.c_str());
+    print_files_list("Command Mode", "Succesfully moved!");
 }
 
 void command_rename(vector<string> parameters)
@@ -733,7 +688,7 @@ void command_rename(vector<string> parameters)
     string dest = src_path + "/" + parameters[2];
     cout << "dest" << endl;
     rename(get_absolute_path(parameters[1]).c_str(), dest.c_str());
-    populate_files_list(src_path.c_str());
+    // populate_files_list(src_path.c_str());
     print_files_list("Command Mode", "Renamed " + parameters[1] + " to " + parameters[2]);
 }
 
@@ -772,8 +727,8 @@ void command_create_file(vector<string> parameters)
     // cout << "appended to dest dir - " << destination_file_name << endl;
     FILE *f = fopen(destination_file_name.c_str(), "w+");
     fclose(f);
-    populate_files_list(destination_dir_name.c_str());
-    print_files_list("Command Mode", "Succesfully created new file! Displaying destination directory now.");
+    // populate_files_list(destination_dir_name.c_str());
+    print_files_list("Command Mode", "Succesfully created new file!");
 }
 
 void command_create_dir(vector<string> parameters)
@@ -808,8 +763,8 @@ void command_create_dir(vector<string> parameters)
     }
     string destination_dir_name = destination_name + "/" + new_dir_name;
     mkdir(destination_dir_name.c_str(), 0777);
-    populate_files_list(destination_name.c_str());
-    print_files_list("Command Mode", "Succesfully created new directory! Displaying destination directory now.");
+    // populate_files_list(destination_name.c_str());
+    print_files_list("Command Mode", "Succesfully created new directory!");
 }
 
 void command_goto(vector<string> parameters)
@@ -823,7 +778,6 @@ void command_goto(vector<string> parameters)
     {
         string curr = backward_stack.back();
         backward_stack.pop_back();
-        cout << curr << endl;
         populate_files_list(curr.c_str());
         print_files_list("Command Mode", "Error, Folder not present!");
     }
@@ -952,13 +906,14 @@ int main(void)
     struct passwd *pw = getpwuid(getuid());
     char *home = pw->pw_dir;
     home_dir = home;
-    populate_files_list();
+    populate_files_list(home_dir.c_str());
     signal(SIGWINCH, resize);
     print_files_list();
     char key;
     bool quit = false;
     while (!quit && read(STDIN_FILENO, &key, 1) == 1 && key != 'q')
     {
+        // cout << (int)key << endl;
         switch (key)
         {
         case 65:
@@ -967,14 +922,14 @@ int main(void)
         case 66:
             move_down();
             break;
-        case 'h':
-            go_to_home();
-            break;
         case 67:
             go_forward();
             break;
         case 68:
             go_backward();
+            break;
+        case 'h':
+            go_to_home();
             break;
         case 127:
             go_to_parent();
