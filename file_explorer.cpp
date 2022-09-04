@@ -346,6 +346,7 @@ void move_down()
 void go_to_home()
 {
     backward_stack.push_back(current_dir);
+    forward_stack.clear();
     struct passwd *pw = getpwuid(getuid());
     char *home = pw->pw_dir;
     home_dir = home;
@@ -408,6 +409,7 @@ void click()
     if (files_list[cursor].type == "dir" && files_list[cursor].name != "." && files_list[cursor].name != "..")
     {
         backward_stack.push_back(current_dir);
+        forward_stack.clear();
         char *path = new char[click_path.length() + 1];
         strcpy(path, click_path.c_str());
         populate_files_list(path);
@@ -609,7 +611,6 @@ void command_copy(vector<string> parameters)
         print_files_list("Command Mode", "Error, Must need atleast two arguemnts");
         return;
     }
-    backward_stack.push_back(current_dir);
     // get destination
     string destination_parameter = parameters.back();
     // remove destination, now vector contains files to be copied
@@ -672,7 +673,6 @@ void command_move(vector<string> parameters)
         print_files_list("Command Mode", "Error, Must need atleast two arguemnts");
         return;
     }
-    backward_stack.push_back(current_dir);
     // get destination
     string destination_parameter = parameters.back();
     // remove destination, now vector contains files to be copied
@@ -708,6 +708,7 @@ void command_move(vector<string> parameters)
             command_delete_file(entry_path);
         }
     }
+
     populate_files_list(destination.c_str());
     print_files_list("Command Mode", "Succesfully moved! Displaying destination directory now.");
 }
@@ -828,6 +829,7 @@ void command_goto(vector<string> parameters)
     }
     else
     {
+        forward_stack.clear();
         print_files_list("Command Mode", "Navigating to " + path);
     }
 }
