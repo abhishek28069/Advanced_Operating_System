@@ -171,6 +171,29 @@ string print_permissions(struct stat file)
     return permissions;
 }
 
+bool one_level_search(string key, string dir_path)
+{
+    DIR *directory;
+    struct dirent *marker;
+    struct stat checker;
+
+    directory = opendir(dir_path.c_str());
+    if (directory == NULL)
+    {
+        return false;
+    }
+    while ((marker = readdir(directory)))
+    {
+        stat(marker->d_name, &checker);
+        if (key == string(marker->d_name))
+        {
+            return true;
+        }
+    }
+    closedir(directory);
+    return false;
+}
+
 // Populates the files list global variable with the files in given directory
 void populate_files_list(const char *path = current_dir.c_str())
 {
@@ -577,7 +600,7 @@ void command_copy(vector<string> parameters)
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
         // if already present
-        if (command_search(entry_name, destination))
+        if (one_level_search(entry_name, destination))
         {
             string decision;
             print_files_list("Command Mode", "Error, The destination contains the file/folder already. Do you want to replace it?");
@@ -633,7 +656,7 @@ void command_move(vector<string> parameters)
         stat(entry_path.c_str(), &t);
         string destination_path = destination + entry_path.substr(entry_path.find_last_of("/"));
         // if file already present
-        if (command_search(entry_name, destination))
+        if (one_level_search(entry_name, destination))
         {
             string decision;
             print_files_list("Command Mode", "Error, The destination contains the file/folder already. Do you want to replace it?");
@@ -698,7 +721,7 @@ void command_create_file(vector<string> parameters)
         destination_dir_name = get_absolute_path(parameters[1]);
     }
     // if file already present
-    if (command_search(new_file_name, destination_dir_name))
+    if (one_level_search(new_file_name, destination_dir_name))
     {
         string decision;
         print_files_list("Command Mode", "Error, The destination contains the file already. Do you want to replace it?");
@@ -734,7 +757,7 @@ void command_create_dir(vector<string> parameters)
         destination_name = get_absolute_path(parameters[1]);
     }
     // if file already present
-    if (command_search(new_dir_name, destination_name))
+    if (one_level_search(new_dir_name, destination_name))
     {
         string decision;
         print_files_list("Command Mode", "Error, The destination contains the folder already. Do you want to replace it?");
@@ -849,7 +872,7 @@ bool command_mode()
                 if (command_search(parameters[1], current_dir))
                     print_files_list("Command Mode", "Found " + parameters[1]);
                 else
-                    print_files_list("Command Mode", "Did not found " + parameters[1]);
+                    print_files_list("Command Mode", "Error, Did not found " + parameters[1]);
             }
             else if (parameters[0] == "delete_file")
             {
@@ -892,7 +915,7 @@ int main(void)
     struct passwd *pw = getpwuid(getuid());
     char *home = pw->pw_dir;
     home_dir = home;
-    populate_files_list(home_dir.c_str());
+    populate_files_list();
     signal(SIGWINCH, resize);
     print_files_list();
     char key;
