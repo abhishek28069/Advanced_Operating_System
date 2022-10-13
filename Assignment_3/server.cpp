@@ -1,34 +1,30 @@
 #include <iostream>
 #include <cstring>
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #define PORT 8080
+#define BUF_SIZE 524288
 using namespace std;
 
 void write_file_from_client(int socket_of_request, string dest)
 {
-    char read_buffer[8192] = {0};
-    FILE *d = fopen(dest.c_str(), "wb");
-    if (d == NULL)
-    {
-        perror("[-]Error creating the file\n");
-        exit(EXIT_FAILURE);
-    }
+    char read_buffer[BUF_SIZE] = {0};
+    int d = open(dest.c_str(), O_WRONLY | O_CREAT, 0644);
     int size_of_message;
     while (1)
     {
-        memset(read_buffer, 0, 1024);
-        size_of_message = read(socket_of_request, read_buffer, 1024);
+        size_of_message = read(socket_of_request, read_buffer, BUF_SIZE);
         if (size_of_message <= 0)
         {
             cout << "[*]Finished writing messaage\n";
             break;
         }
         cout << "[*]Block of " << size_of_message << " recieved from clent\n";
-        fwrite(read_buffer, 1, size_of_message, d);
+        write(d, read_buffer, size_of_message);
     }
-    fclose(d);
+    close(d);
     return;
 }
 
@@ -67,7 +63,7 @@ int main()
             perror("[-]Error while accepting request\n");
             exit(EXIT_FAILURE);
         }
-        write_file_from_client(socket_of_request, "dest.mkv");
+        write_file_from_client(socket_of_request, "dest.txt");
     }
     return 0;
 }
