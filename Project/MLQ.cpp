@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <bits/stdc++.h>
-#include "RR.cpp"
+#include "RR_MLQ.cpp"
 using namespace std;
 
 int clk = 0;
@@ -223,6 +223,58 @@ void terminate(Process &current, queue<Process> &terminate_queue)
     terminate_queue.push(current);
 }
 
+void fcfs_execute(priority_queue<Process> ready_queue, queue<Process> terminate_queue)
+{
+    while (!ready_queue.empty())
+    {
+        Process current = ready_queue.top();
+        ready_queue.pop();
+        cout << current.arrival_time << endl;
+        // check arrival time and current time
+        while (clk < current.arrival_time_copy)
+        {
+            // idle
+            clk++;
+            run_process();
+        }
+
+        // record start_time
+        current.start_time = clk;
+        // response time
+        current.response_time = current.start_time - current.arrival_time;
+
+        // increment clock to finish the process
+        set_running(current);
+        int end_time = clk + current.cpu_burst1;
+        while (clk < end_time)
+        {
+            clk++;
+            run_process(current);
+        }
+        // push into termination_queue or ready queue
+        terminate(current, terminate_queue);
+    }
+}
+
+void print_schedule(queue<Process> terminate_queue)
+{
+    queue<Process> temp = terminate_queue;
+    vector<Process> temp2;
+    cout << setw(10) << "id" << setw(10) << "name" << setw(10) << "priority" << setw(10) << "arrival" << setw(10) << "burst1" << setw(10) << "io" << setw(10) << "burst2" << setw(10) << "start" << setw(10) << "resp" << setw(10) << "compl" << setw(10) << "turn" << setw(10) << "wait";
+    cout << "\n";
+    while (!temp.empty())
+    {
+        auto p = temp.front();
+        temp.pop();
+        temp2.push_back(p);
+    }
+    sort(temp2.begin(), temp2.end(), IdComp3);
+    for (auto p : temp2)
+    {
+        cout << setw(10) << p.PID << setw(10) << p.name << setw(10) << p.priority << setw(10) << p.arrival_time << setw(10) << p.cpu_burst1 << setw(10) << p.io_burst << setw(10) << p.cpu_burst2 << setw(10) << p.start_time << setw(10) << p.response_time << setw(10) << p.completion_time << setw(10) << p.turn_around_time << setw(10) << p.waiting_time << endl;
+    }
+}
+
 int main(int argc, char **argv)
 {
     vector<priority_queue<Process>> ready_queues(3); // 0(RR) for priority 10-8, 1(RR) for priority 7-4, 2(FCFS) for priority 3-0
@@ -233,46 +285,14 @@ int main(int argc, char **argv)
 
     RR rr1, rr2;
 
-    rr1.exec(RR_Processes[0]);
+    int q1_end_time = rr1.execute(RR_Processes[0], 0, false);
+
     cout << "\n\n\n\n";
-    rr2.exec(RR_Processes[1]);
 
-    // while (!ready_queues[2].empty())
-    // {
-    //     Process current = ready_queues[2].top();
-    //     ready_queues[2].pop();
-    //     cout << current.arrival_time << endl;
-    //     // check arrival time and current time
-    //     while (clk < current.arrival_time)
-    //     {
-    //         // idle
-    //         clk++;
-    //         run_process();
-    //     }
+    int q2_end_time = rr2.execute(RR_Processes[1], q1_end_time, true);
+    clk = q2_end_time / 1000;
 
-    //     // record start_time
-    //     current.start_time = clk;
-    //     // response time
-    //     current.response_time = current.start_time - current.arrival_time;
+    fcfs_execute(ready_queues[2], terminate_queue);
 
-    //     // increment clock to finish the process
-    //     set_running(current);
-    //     int end_time = clk + current.cpu_burst1;
-    //     while (clk < end_time)
-    //     {
-    //         clk++;
-    //         run_process(current);
-    //     }
-    //     // push into termination_queue or ready queue
-    //     terminate(current, terminate_queue);
-    // }
-    // cout << setw(10) << "id" << setw(10) << "name" << setw(10) << "arrival" << setw(10) << "burst1" << setw(10) << "io" << setw(10) << "burst2" << setw(10) << "start" << setw(10) << "resp" << setw(10) << "compl" << setw(10) << "turn" << setw(10) << "wait";
-    // cout << "\n";
-    // while (!terminate_queue.empty())
-    // {
-    //     auto p = terminate_queue.front();
-    //     terminate_queue.pop();
-    //     cout << setw(10) << p.PID << setw(10) << p.name << setw(10) << p.arrival_time << setw(10) << p.cpu_burst1 << setw(10) << p.io_burst << setw(10) << p.cpu_burst2 << setw(10) << p.start_time << setw(10) << p.response_time << setw(10) << p.completion_time << setw(10) << p.turn_around_time << setw(10) << p.waiting_time << endl;
-    // }
     return 0;
 }
